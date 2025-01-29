@@ -1,0 +1,21 @@
+import requests
+import pandas as pd
+import csv
+from datetime import datetime
+url="https://api.openweathermap.org/data/2.5/weather?q=london&appid="""
+response=requests.get(url)
+data=response.json()
+def timestamp():
+    dt_object=datetime.utcfromtimestamp(data['dt']+data['timezone'])
+    return dt_object
+Transformed_data={
+        'country':data['sys']['country'],
+        'city':data['name'],
+        'temperature':data['main']['temp']-273.15,
+        'humidity':data['main']['humidity'],
+        'timestamp':timestamp(),
+        'description':data['weather'][0]['description']
+    }
+list_Transformed_data=[Transformed_data]
+df_data=pd.DataFrame(list_Transformed_data)
+print(df_data)
