@@ -1,0 +1,56 @@
+-- Create database, warehouse, and schema
+CREATE DATABASE open_weather_database;
+CREATE WAREHOUSE open_weather_warehouse;
+CREATE SCHEMA open_weather_schema;
+
+-- Create table to store weather data
+CREATE TABLE open_weather_database.open_weather_schema.weather_data (
+    country VARCHAR(50),
+    city VARCHAR(50),
+    temperature FLOAT, 
+    humidity INT,       
+    timestamp DATETIME,
+    description VARCHAR(200)
+);
+
+-- Query table to check its structure 
+SELECT * FROM open_weather_database.open_weather_schema.weather_data LIMIT 10;
+SELECT COUNT(*) FROM open_weather_database.open_weather_schema.weather_data;
+
+-- Create schema for file format objects
+CREATE SCHEMA file_format_schema;
+
+-- Create file format for CSV files
+CREATE OR REPLACE FILE FORMAT open_weather_database.file_format_schema.format_csv
+    TYPE = 'CSV'
+    FIELD_DELIMITER = ','
+    RECORD_DELIMITER = '\n'
+    SKIP_HEADER = 1;
+
+-- Create schema for external staging
+CREATE SCHEMA external_stage_schema;
+
+-- Create external stage to connect to S3 bucket
+CREATE STAGE open_weather_database.external_stage_schema.weather_stage
+    URL = 's3://weather-transform-zone-yml/'
+    CREDENTIALS = (
+        AWS_KEY_ID = 'xxxx'
+        AWS_SECRET_KEY = 'yyyy'
+    )
+    FILE_FORMAT = open_weather_database.file_format_schema.format_csv;
+
+-- List files in the S3 stage to verify connection
+LIST @open_weather_database.external_stage_schema.weather_stage;
+
+-- Create schema for Snowpipe
+CREATE SCHEMA snowpipe_schema;
+
+-- Create Snowpipe to automate ingestion
+CREATE PIPE open_weather_database.snowpipe_schema.weather_snowpipe
+    AUTO_INGEST = TRUE
+    AS
+    COPY INTO open_weather_database.open_weather_schema.weather_data
+    FROM @open_weather_database.external_stage_schema.weather_stage;
+
+-- Describe the created Snowpipe
+DESC PIPE open_weather_database.snowpipe_schema.weather_snowpipe;
